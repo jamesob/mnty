@@ -138,7 +138,7 @@ if __name__ == '__main__':
 
     if not hasattr(args, 'op'):
         print("No operation specified.")
-        exit(0)
+        exit(1)
     elif not cfg and args.op != MntyConfig.init_config:
         print("No run-control file detected.")
         exit(1)
@@ -152,5 +152,6 @@ if __name__ == '__main__':
         os.system(cmdString)
     else:
         print("No mount profile specified.")
+        exit(1)
 
 
