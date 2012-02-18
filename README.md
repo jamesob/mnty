@@ -22,10 +22,10 @@ So here's mnty, a utility for managing sshfs mount profiles.
 
 ## Installing
 
-1. Clone this repo.
-2. Symlink `mnty` to somewhere in your path.
-3. Run `mnty --init` to initialize a config file at `$HOME/.mnty`.
-4. Modify the config file. It may look something like this:
+- Clone this repo.
+- Symlink `mnty` to somewhere in your path.
+- Run `mnty --init` to initialize a config file at `$HOME/.mnty`.
+- Modify the config file. It may look something like this:
 
 ```javascript
 {
@@ -44,5 +44,5 @@ So here's mnty, a utility for managing sshfs mount profiles.
 }
 ```
 
-5. Mount and unmount with `mnty -m foia` or `mnty -u foia`.
+- Mount and unmount with `mnty -m foia` or `mnty -u foia`.
 
