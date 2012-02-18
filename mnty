@@ -1,0 +1,156 @@
+#!/usr/bin/python3
+
+
+import argparse
+import os
+import json
+
+_desc = "A tiny convenience for managing sshfs mount profiles."
+
+class MntyConfig(object):
+    """Responsible for loading and initializing a JSON dotfile used to manage
+    a user's mount profiles and default sshfs options."""
+
+    default_cfg_loc = os.path.join(os.environ['HOME'], ".mnty")
+
+    def __init__(self):
+        """SPOT for config representation."""
+        self.sshfs_options = "-o reconnect"
+        self.default_remote_user = "you_there"
+        self.mount_profiles = {
+            'name_of_profile': {
+                'remote_dir': 'someserver.com:/a/folder/there',
+                'remote_user': '(optional) you_there',
+                'mountpoint': '/some/folder/here',
+            },
+        }
+
+    @staticmethod
+    def get_config() -> "MntyConfig":
+        cfg_dict = None
+
+        if os.access(MntyConfig.default_cfg_loc, os.R_OK):
+            with open(MntyConfig.default_cfg_loc, 'r') as f:
+                cfg_data = f.read()
+
+            cfg_dict = json.loads(cfg_data)
+
+        return MntyConfig.from_dict(cfg_dict)
+
+    @staticmethod
+    def from_dict(in_dict) -> "MntyConfig":
+        """Static constructor"""
+        new = MntyConfig()
+        new.__dict__ = in_dict or {}
+        return new
+
+    @staticmethod
+    def init_config():
+        new = MntyConfig()
+
+        with open(MntyConfig.default_cfg_loc, 'w') as f:
+            f.write(json.dumps(new.__dict__, indent=2))
+
+        print("Configuration written to %s." % MntyConfig.default_cfg_loc)
+
+    def new(self) -> dict:
+        """Return the specification for MntyConfig JSON representation in dict 
+        form."""
+        return self.__dict__
+
+class Sshfs(object):
+    """sshfs interaction that all systems share in common."""
+
+    def __init__(self, 
+                 profile_name: "Name of the mount profile", 
+                 mnty_cfg: MntyConfig):
+        self.mnty_cfg = mnty_cfg
+
+        try: 
+            self.profile = mnty_cfg.mount_profiles[profile_name]
+        except KeyError:
+            print("No mount profile called '%s' found." % profile_name)
+            exit(1)
+
+        self.remote_user = self.profile.get('remote_user',
+                                            mnty_cfg.default_remote_user)
+
+    def mnt(self):
+        return "sshfs %s %s@%s %s" \
+                % (self.mnty_cfg.sshfs_options, 
+                   self.remote_user,
+                   self.profile['remote_dir'],
+                   self.profile['mountpoint'])
+
+    @staticmethod
+    def determine_sshfs() -> "Sshfs":
+        """Return an Sshfs subclass based on OS."""
+        the_os = os.uname()[0]
+
+        if the_os == "Linux":
+            return LinuxSshfs
+        else:
+            return DarwinSshfs
+
+class DarwinSshfs(Sshfs):
+    """sshfs on Darwin systems."""
+
+    def umnt(self):
+        return "diskutil umount force %s" % self.profile['mountpoint']
+
+class LinuxSshfs(Sshfs):
+    """sshfs on Linux systems."""
+
+    def umnt(self):
+        return "fusermount -uz %s" % self.profile['mountpoint']
+
+def build_parser():
+    """Build and return a CLI argument parser."""
+    parser = argparse.ArgumentParser(description=_desc)
+
+    parser.add_argument('profile_name', 
+          action='store', 
+          type=str, 
+          default="",
+          nargs='?',
+          help='The mount profile to act on.')
+
+    parser.add_argument('--init',
+          action='store_const', const='init',
+          dest='op',
+          help='Initialize a skeleton config file.')
+
+    parser.add_argument('-m', '--mount',
+          action='store_const', const='mnt',
+          dest='op',
+          help='Mount the sshfs drive.')
+
+    parser.add_argument('-u', '--unmount',
+          action='store_const', const='umnt',
+          dest='op',
+          help='Unmount the sshfs drive.')
+
+    return parser
+
+if __name__ == '__main__':
+    cfg = MntyConfig.get_config()
+    args = build_parser().parse_args()
+
+    if not hasattr(args, 'op'):
+        print("No operation specified.")
+        exit(0)
+    elif not cfg and args.op != MntyConfig.init_config:
+        print("No run-control file detected.")
+        exit(1)
+    elif args.op == 'init':
+        MntyConfig.init_config()
+        exit(0)
+
+    if args.profile_name:
+        sshfs = Sshfs.determine_sshfs()(args.profile_name, cfg)
+        cmdString = getattr(sshfs, args.op)()
+        os.system(cmdString)
+    else:
+        print("No mount profile specified.")
+
+
