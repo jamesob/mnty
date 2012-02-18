@@ -26,6 +26,7 @@ So here's mnty, a utility for managing sshfs mount profiles.
 2. Symlink `mnty` to somewhere in your path.
 3. Run `mnty --init` to initialize a config file at `$HOME/.mnty`.
 4. Modify the config file. It may look something like this:
+
 ```javascript
 {
   "default_remote_user": "jobeirne", 
@@ -42,5 +43,6 @@ So here's mnty, a utility for managing sshfs mount profiles.
   }
 }
 ```
+
 5. Mount and unmount with `mnty -m foia` or `mnty -u foia`.
 
