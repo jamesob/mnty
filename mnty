@@ -135,23 +135,25 @@ def build_parser():
 if __name__ == '__main__':
     cfg = MntyConfig.get_config()
     args = build_parser().parse_args()
+    code = 0
 
     if not hasattr(args, 'op'):
         print("No operation specified.")
-        exit(1)
-    elif not cfg and args.op != MntyConfig.init_config:
-        print("No run-control file detected.")
-        exit(1)
+        code = 1
     elif args.op == 'init':
         MntyConfig.init_config()
-        exit(0)
-
-    if args.profile_name:
+        code = 0
+    elif not cfg:
+        print("No run-control file detected.")
+        code = 1
+    elif args.profile_name:
         sshfs = Sshfs.determine_sshfs()(args.profile_name, cfg)
         cmdString = getattr(sshfs, args.op)()
         os.system(cmdString)
+        code = 0
     else:
         print("No mount profile specified.")
-        exit(1)
+        code = 1
 
+    exit(code)
 
